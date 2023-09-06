@@ -17,6 +17,7 @@
 			border: 1px solid lightgray;
 			padding: 10px;
 			margin-top: 10px;
+			overflow-y: auto;
 		}
 
 		#container {
@@ -49,11 +50,11 @@
 			request.open('GET', url, true);
 			request.send(null);
 
-			request.onreadystatechange = function () {
-				if (request.readyState === 4 && request.status === 200) {
+			request.onreadystatechange = function() {
+				if(request.readyState === 4 && request.status === 200) {
 					var type = request.getResponseHeader('Content-Type');
 		
-					if (type.indexOf("text") !== 1) {
+					if(type.indexOf("text") !== 1) {
 						callback(request.responseText);
 					}
 				}
@@ -74,15 +75,18 @@
 		var params = new URLSearchParams(window.location.search);
 		var file = params.get("github");
 		
-		if (file != null) {
+		if(file != null) 
+		{
 			get_contents(`https://cdn.jsdelivr.net/gh/${file}`, function(content) {
 				editor.setValue(content);
 				editor.clearSelection();
 			});
-		} else {
+		} 
+		else 
+		{
 			var code = params.get("code");
 
-			if (code != null) {
+			if(code != null) {
 				editor.setValue(code);
 				editor.clearSelection();
 			}
@@ -107,27 +111,36 @@
 			printErr: function(text) {
 				if(arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
 				console.error(text);
-				//document.getElementById("output").innerText += text + '\n';
 				document.getElementById("output").innerHTML += `<span class="error">${text}</span>\n`;
 			}
         };
 
-        let timer;
+		var run_tea, new_state, free_state;
 
+		Module['onRuntimeInitialized'] = function() {
+			create_state = Module.cwrap('new_state', null, []);
+			free_state = Module.cwrap('free_state', null, []);
+			run_tea = Module.cwrap('run_tea', null, ['string']);
+
+			create_state();
+		};
+
+		window.onbeforeunload = function() {
+			free_state();
+		};
+
+		
 		function clear_output() 
         {
 			document.getElementById("output").innerHTML = "";
 		}
-
+		
 		function run_input()
         {
-			clearTimeout(timer);
-            let input = editor.getValue();
-            timer = setTimeout(function() {
-                    document.getElementById("output").innerHTML = "";
-                    Module.ccall("run_tea", 'null', ['string'], [input]);
-                },
-                750);
+			clear_output();
+
+			let input = editor.getValue();
+			run_tea(input);
 		}
 
 		function share() 
